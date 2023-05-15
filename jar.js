@@ -7,25 +7,34 @@ let height = 600;
 let x0 = width / 2;
 
 // ball properties
-const ballRadius = 8;
+// const ballRadius = 8;
 let y_start = 0;
 let y_peg_start = 50;
-let gap_between_pegs_and_buckets = ballRadius * 2;
+// let gap_between_pegs_and_buckets = ballRadius * 2;
 let generation_speed = 20;
 let nBeans = 250;
 let mass = 100;
-let density = 1;
 
-// jar properties
-let jarWidth = 0.5;
+
+let colorPal = [
+    '#ff8aa6', // Pastel Pink
+    '#ff9b48', // Pastel Orange
+    '#fff067', // Pastel Yellow
+    '#9EE09E', // Pastel Green
+    '#71c4e6', // Pastel Blue
+    '#edceff', // Pastel Purple
+    '#fc5c30', // Pastel Brown
+    '#CAF7E2'  // Pastel Mint
+];
+
 
 // physics properties
 let restitution = 0.5;
 let friction = 0.01;
 let frictionAir = 0.045;
 let frictionStatic = 0;
+let density = 1;
 
-let jarCount = 0;
 let intervalId;
 
 
@@ -36,7 +45,15 @@ var { Engine, Render, Runner,
 
 let engine, render, runner, world;
 
+let beanRadius, jarWidth, jarHeight, jarCount;
 
+function setParams() {
+    jarCount = 0;
+    jarWidth = 0.5 + Math.random() * 0.4;
+    jarHeight = 0.5 + Math.random() * 0.2;
+    beanRadius = jarWidth * 6 + Math.random() * 6;
+    nBeans = 500 * jarWidth;
+}
 
 function initialize() {
     // create engine
@@ -77,7 +94,7 @@ function makeBeans() {
     intervalId = setInterval(() => {
         let balls = [];
         if (total-- > 0) {
-            const circle = Bodies.circle(x0 + (-0.5 + Math.random()) * 250, -20, ballRadius + Math.random() * 8, {
+            const circle = Bodies.circle(x0 + (-0.5 + Math.random()) * 250, -20, beanRadius + Math.random() * 8, {
                 label: "circle",
                 friction: 0.001,
                 restitution,
@@ -87,7 +104,7 @@ function makeBeans() {
                 frictionAir,
                 sleepThreshold: 15,
                 render: {
-                    fillStyle: d3.schemeCategory10[total % 10]
+                    fillStyle: colorPal[Math.floor(Math.random()*colorPal.length)]
                 }
             });
 
@@ -140,7 +157,7 @@ function makeJar() {
     // left wall
     Matter.Composite.add(
         world,
-        Bodies.rectangle(width * (1 - jarWidth) / 2, height * 0.65, thickness, height * 0.5, {
+        Bodies.rectangle(width * (1 - jarWidth) / 2, (height) - (height * jarHeight/2), thickness, height * jarHeight, {
             isStatic: true,
             render: {
                 fillStyle: "#000000",
@@ -153,7 +170,7 @@ function makeJar() {
     // right wall
     Matter.Composite.add(
         world,
-        Bodies.rectangle(width * (1 - (1 - jarWidth) / 2), height * 0.65, thickness, height * 0.5, {
+        Bodies.rectangle(width * (1 - (1 - jarWidth) / 2), (height) - (height * jarHeight/2), thickness, height * jarHeight, {
             isStatic: true,
             render: {
                 fillStyle: "#000000",
@@ -165,7 +182,7 @@ function makeJar() {
     // bottom
     Matter.Composite.add(
         world,
-        Bodies.rectangle(width * 0.5, height * 0.9 - 5, width * jarWidth, thickness, {
+        Bodies.rectangle(width * 0.5, height - 5, width * jarWidth, thickness, {
             isStatic: true,
             render: {
                 fillStyle: "#000000",
@@ -188,6 +205,7 @@ function reset() {
     render.textures = {};
     console.log('reset clicked');
 
+    setParams();
     initialize();
     makeJar();
     makeBeans();
@@ -195,7 +213,7 @@ function reset() {
 
 
 //
-
+setParams();
 initialize();
 makeJar();
 makeBeans();
