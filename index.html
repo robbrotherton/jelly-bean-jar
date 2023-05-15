@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess the Jellybeans</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Just+Another+Hand&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.4/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
+</head>
+
+<body>
+    <div id="container" style="position: relative; width: 100%; margin: 0 auto; text-align: center;">
+        <div class="heading" style="position: absolute; z-index: 0;">
+            How many jellybeans in the jar?
+        </div>
+        <canvas id="canvas"></canvas>
+    </div>
+    <div style="text-align: center;">
+        <span id="revealBtn">Reveal</span>
+    </div>
+    <script src="jar.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,23 @@
+html, body {
+    width: 700px;
+    margin: 0 auto;
+}
+
+.heading {
+    font-size: 5em;
+    font-family: "Just Another Hand";
+    margin-top: 1em;
+    text-align: center;
+    width: 100%;
+}
+
+#revealBtn {
+    font-size: 5em;
+    font-family: "Just Another Hand";
+    margin-top: -2em;
+    cursor: pointer;
+}
+
+#revealBtn:hover {
+    color: red;
+}
