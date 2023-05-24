@@ -1,20 +1,6 @@
-// https://codesandbox.io/s/github/rjoxford/MatterJSGaltonBoard
-// https://www.tylermw.com/plinko-statistics-insights-from-the-bean-machine/
-
-
 let width = 500;
 let height = 600;
 let x0 = width / 2;
-
-// ball properties
-// const ballRadius = 8;
-let y_start = 0;
-let y_peg_start = 50;
-// let gap_between_pegs_and_buckets = ballRadius * 2;
-let generation_speed = 20;
-let nBeans = 250;
-let mass = 100;
-
 
 let colorPal = [
     '#ff8aa6', // Pastel Pink
@@ -29,13 +15,18 @@ let colorPal = [
 
 
 // physics properties
-let restitution = 0.5;
-let friction = 0.01;
-let frictionAir = 0.045;
-let frictionStatic = 0;
-let density = 1;
+const physicsParams = {
+    label: "circle",
+    mass: 100,
+    restitution: 0.5,
+    friction: 0.01,
+    frictionAir: 0.025,
+    frictionStatic: 0,
+    density: 1,
+    slop: 0.05,
+    sleepThreshold: 15
+}
 
-let intervalId;
 
 
 var { Engine, Render, Runner,
@@ -43,29 +34,38 @@ var { Engine, Render, Runner,
     MouseConstraint, Mouse, Events,
     World, Bodies, Body } = Matter;
 
-let engine, render, runner, world;
+let intervalId = null;
 
-let beanRadius, jarWidth, jarHeight, jarCount;
+let params = randomizeParams();
+let engine = initializeWorld("board", "canvas", width, height);
 
-function setParams() {
-    jarCount = 0;
-    jarWidth = 0.5 + Math.random() * 0.4;
-    jarHeight = 0.5 + Math.random() * 0.2;
-    beanRadius = jarWidth * 6 + Math.random() * 6;
-    nBeans = 500 * jarWidth;
+Composite.add(engine.world, makeJar(params));
+
+let generateBean = createBeanGenerator(params, physicsParams, x0, colorPal);
+addBeansToWorld(engine.world, generateBean, params);
+
+
+function randomizeParams() {
+    const generationSpeed = 20;
+    const jarCount = 0;
+    const jarWidth = 0.5 + Math.random() * 0.4;
+    const jarHeight = 0.5 + Math.random() * 0.2;
+    const beanRadius = 6 + Math.random() * 6;
+    const nBeans = Math.floor(4000 * (jarWidth * jarHeight) * (1 / beanRadius));
+    
+    return {nBeans, beanRadius, generationSpeed, jarWidth, jarHeight, jarCount};
 }
 
-function initialize() {
-    // create engine
-    engine = Engine.create({
+function initializeWorld(element, canvas, width, height) {
+    let engine = Engine.create({
         enableSleeping: true
     }),
-        world = engine.world;
+    world = engine.world;
 
     // create renderer
-    render = Render.create({
-        element: document.getElementById("board"),
-        canvas: document.getElementById("canvas"),
+    let render = Render.create({
+        element: document.getElementById(element),
+        canvas: document.getElementById(canvas),
         engine: engine,
         options: {
             width: width,
@@ -77,144 +77,138 @@ function initialize() {
     });
     Render.run(render);
 
-    // create runner
-    runner = Runner.create();
+    let runner = Runner.create();
     Runner.run(runner, engine);
-    render.canvas.addEventListener("mousedown", reset);
+
+    // Reset simulation on mousedown events
+    render.canvas.addEventListener("mousedown", handleReset);
+
+    return {world, render};
 }
 
 
+function createBeanGenerator(params, physicsParams, x, colors) {
+    let total = params.nBeans;
 
-
-function makeBeans() {
-
-    let total = nBeans;
-    clearInterval(intervalId);
-
-    intervalId = setInterval(() => {
-        let balls = [];
+    return function generateBean() {
         if (total-- > 0) {
-            const circle = Bodies.circle(x0 + (-0.5 + Math.random()) * 250, -20, beanRadius + Math.random() * 8, {
+            const circle = Bodies.circle(x + (-0.5 + Math.random()) * 250, -20, params.beanRadius + Math.random() * 8, {
                 label: "circle",
-                friction: 0.001,
-                restitution,
-                mass,
-                slop: 0.05,
-                density,
-                frictionAir,
-                sleepThreshold: 15,
+                friction: physicsParams.friction,
+                restitution: physicsParams.restitution,
+                mass: physicsParams.mass,
+                slop: physicsParams.slop,
+                density: physicsParams.density,
+                frictionAir: physicsParams.frictionAir,
+                sleepThreshold: physicsParams.sleepThreshold,
                 render: {
-                    fillStyle: colorPal[Math.floor(Math.random()*colorPal.length)]
+                    fillStyle: colors[Math.floor(Math.random()*colors.length)]
                 }
             });
 
             Events.on(circle, "sleepStart", function () {
                 circle.isStatic = true;
-                jarCount++;
+                circle.label = "inJar";
             });
 
-            Matter.Composite.add(world, circle);
+            return circle;
+        } else {
+            return null;
         }
-    }, generation_speed);
+    }
 }
+
+function addBeansToWorld(world, generatorFunction, params) {
+    intervalId = setInterval(() => {
+        let bean = generatorFunction();
+        if (bean) {
+            Composite.add(world, bean);
+        } else {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    }, params.generationSpeed);
+}
+
 
 let existingBalls = () => {
-    return world.bodies.filter((body) => body.label === "circle");
+    return engine.world.bodies.filter((body) => body.label === "circle");
 };
 
-const btn = document.getElementById("revealBtn");
-btn.addEventListener("click", function(event) {
-    btn.innerHTML = jarCount;
-})
-
-function showRevealButton() {
-    btn.innerHTML = "Reveal";
-}
 
 const makeStaticInterval = setInterval(() => {
     existingBalls().forEach(function (ball) {
         let ballHeight = ball.position.y;
-        let ballSpeed = ball.speed;
-        let minHeight = 50; // height - (floorHeight + wallHeight);
         if (ballHeight > height) {
             console.log("gonner");
-            Composite.remove(world, ball);
+            Composite.remove(engine.world, ball);
         }
-        // if (ballHeight > minHeight && ballSpeed < 0.02) {
-        //     // ball.render.opacity = 0.5;
-        //     Body.setStatic(ball, true);
-        //     jarCount++;
-        //     console.log(jarCount);
-        // }
     });
 }, 200);
 
 
-function makeJar() {
+function makeJar(params) {
 
     const thickness = 10;
 
+    const properties = {
+        isStatic: true,
+        render: {
+            fillStyle: "#000000",
+            visible: true
+        },
+        chamfer: { radius: [5, 5, 5, 5]}
+    };
+
     // left wall
-    Matter.Composite.add(
-        world,
-        Bodies.rectangle(width * (1 - jarWidth) / 2, (height) - (height * jarHeight/2), thickness, height * jarHeight, {
-            isStatic: true,
-            render: {
-                fillStyle: "#000000",
-                visible: true
-            },
-            chamfer: { radius: [5, 5, 5, 5]}
-        })
-    );
+    const leftWall = Bodies.rectangle(width * (1 - params.jarWidth) / 2, (height) - (height * params.jarHeight/2), thickness, height * params.jarHeight, properties);
 
     // right wall
-    Matter.Composite.add(
-        world,
-        Bodies.rectangle(width * (1 - (1 - jarWidth) / 2), (height) - (height * jarHeight/2), thickness, height * jarHeight, {
-            isStatic: true,
-            render: {
-                fillStyle: "#000000",
-                visible: true
-            },
-            chamfer: { radius: [5, 5, 5, 5]}
-        })
-    );
+    const rightWall = Bodies.rectangle(width * (1 - (1 - params.jarWidth) / 2), (height) - (height * params.jarHeight/2), thickness, height * params.jarHeight, properties);
+
     // bottom
-    Matter.Composite.add(
-        world,
-        Bodies.rectangle(width * 0.5, height - 5, width * jarWidth, thickness, {
-            isStatic: true,
-            render: {
-                fillStyle: "#000000",
-                visible: true
-            },
-            chamfer: { radius: [5, 5, 5, 5]}
-        })
-    );
+    const bottom = Bodies.rectangle(width * 0.5, height - 5, width * params.jarWidth, thickness, properties);
+
+    return [leftWall, rightWall, bottom];
+}
+
+const btn = document.getElementById("revealBtn");
+
+function countBeansInJar(world) {
+    return world.bodies.filter((body) => body.label === "inJar").length;
+}
+
+btn.addEventListener("click", function(event) {
+    btn.innerHTML = countBeansInJar(engine.world);
+})
+
+function resetRevealButton(button) {
+    button.innerHTML = "Reveal";
 }
 
 
 function reset() {
-    Composite.clear(world);
-    Engine.clear(engine);
-    Render.stop(render);
-    Runner.stop(runner);
-    // render.canvas.remove();
-    render.canvas = null;
-    render.context = null;
-    render.textures = {};
-    console.log('reset clicked');
+    const newParams = randomizeParams();
+    const newEngine = initializeWorld("board", "canvas");
+    const newJar = makeJar(newParams);
+    const newBeans = createBeanGenerator(newParams, physicsParams, x0, colorPal);
 
-    setParams();
-    initialize();
-    makeJar();
-    makeBeans();
+    return { newParams, newEngine, newBeans, newJar };
 }
 
-
-//
-setParams();
-initialize();
-makeJar();
-makeBeans();
-
+function handleReset() {
+    resetRevealButton(btn);
+    Composite.clear(engine.world);
+    
+    if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
+    
+    const { newParams, newEngine, newBeans, newJar } = reset();
+    params = newParams;
+    engine = newEngine;
+    Composite.add(engine.world, newJar)
+    generateBean = newBeans;
+    addBeansToWorld(engine.world, generateBean, params);
+}
