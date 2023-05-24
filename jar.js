@@ -14,19 +14,24 @@ let colorPal = [
 ];
 
 
-// physics properties
-const physicsParams = {
-    label: "circle",
-    mass: 100,
-    restitution: 0.5,
-    friction: 0.01,
-    frictionAir: 0.025,
-    frictionStatic: 0,
-    density: 1,
-    slop: 0.05,
-    sleepThreshold: 15
+function randomColor(colorPal) {
+    return colorPal[Math.floor(Math.random() * colorPal.length)];
 }
 
+function getBeanProperties(colorPal) {
+    return {
+        label: "circle",
+        mass: 100,
+        restitution: 0.5,
+        friction: 0.01,
+        frictionAir: 0.025,
+        frictionStatic: 0,
+        density: 1,
+        slop: 0.05,
+        sleepThreshold: 15,
+        render: { fillStyle: randomColor(colorPal) }
+    };
+}
 
 
 var { Engine, Render, Runner,
@@ -41,7 +46,7 @@ let engine = initializeWorld("board", "canvas", width, height);
 
 Composite.add(engine.world, makeJar(params));
 
-let generateBean = createBeanGenerator(params, physicsParams, x0, colorPal);
+let generateBean = createBeanGenerator(params, x0, colorPal);
 addBeansToWorld(engine.world, generateBean, params);
 
 
@@ -87,24 +92,14 @@ function initializeWorld(element, canvas, width, height) {
 }
 
 
-function createBeanGenerator(params, physicsParams, x, colors) {
+function createBeanGenerator(params, x, colors) {
     let total = params.nBeans;
 
     return function generateBean() {
         if (total-- > 0) {
-            const circle = Bodies.circle(x + (-0.5 + Math.random()) * 250, -20, params.beanRadius + Math.random() * 8, {
-                label: "circle",
-                friction: physicsParams.friction,
-                restitution: physicsParams.restitution,
-                mass: physicsParams.mass,
-                slop: physicsParams.slop,
-                density: physicsParams.density,
-                frictionAir: physicsParams.frictionAir,
-                sleepThreshold: physicsParams.sleepThreshold,
-                render: {
-                    fillStyle: colors[Math.floor(Math.random()*colors.length)]
-                }
-            });
+            const circle = Bodies.circle(x + (-0.5 + Math.random()) * 250, -20, params.beanRadius + Math.random() * 8, 
+            getBeanProperties(colorPal)
+            );
 
             Events.on(circle, "sleepStart", function () {
                 circle.isStatic = true;
@@ -191,7 +186,7 @@ function reset() {
     const newParams = randomizeParams();
     const newEngine = initializeWorld("board", "canvas");
     const newJar = makeJar(newParams);
-    const newBeans = createBeanGenerator(newParams, physicsParams, x0, colorPal);
+    const newBeans = createBeanGenerator(newParams, x0, colorPal);
 
     return { newParams, newEngine, newBeans, newJar };
 }
