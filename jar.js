@@ -40,6 +40,7 @@ var { Engine, Render, Runner,
     World, Bodies, Body } = Matter;
 
 let intervalId = null;
+const generationSpeed = 20;
 
 let params = randomizeParams();
 let engine = initializeWorld("board", "canvas", width, height);
@@ -47,7 +48,7 @@ let engine = initializeWorld("board", "canvas", width, height);
 Composite.add(engine.world, makeJar(params));
 
 let generateBean = createBeanGenerator(params, x0, colorPal);
-addBeansToWorld(engine.world, generateBean, params);
+addBeansToWorld(engine.world, generateBean, generationSpeed);
 
 
 function randomizeParams() {
@@ -66,7 +67,6 @@ function initializeWorld(element, canvas, width, height) {
         enableSleeping: true
     }),
     world = engine.world;
-
     // create renderer
     let render = Render.create({
         element: document.getElementById(element),
@@ -81,7 +81,7 @@ function initializeWorld(element, canvas, width, height) {
         }
     });
     Render.run(render);
-
+    
     let runner = Runner.create();
     Runner.run(runner, engine);
 
@@ -113,7 +113,7 @@ function createBeanGenerator(params, x, colors) {
     }
 }
 
-function addBeansToWorld(world, generatorFunction, params) {
+function addBeansToWorld(world, generatorFunction, speed) {
     intervalId = setInterval(() => {
         let bean = generatorFunction();
         if (bean) {
@@ -122,30 +122,29 @@ function addBeansToWorld(world, generatorFunction, params) {
             clearInterval(intervalId);
             intervalId = null;
         }
-    }, params.generationSpeed);
+    }, speed);
 }
 
 
-let existingBalls = () => {
+const existingBalls = () => {
     return engine.world.bodies.filter((body) => body.label === "circle");
 };
 
-
 const makeStaticInterval = setInterval(() => {
-    existingBalls().forEach(function (ball) {
-        let ballHeight = ball.position.y;
-        if (ballHeight > height) {
-            console.log("gonner");
-            Composite.remove(engine.world, ball);
-        }
-    });
+    existingBalls().forEach((ball) => removeBall(engine, ball, height));
 }, 200);
 
+function removeBall(engine, ball, canvasHeight) {
+    let ballHeight = ball.position.y;
+    if (ballHeight > canvasHeight) {
+        console.log("gonner");
+        Composite.remove(engine.world, ball);
+    }
+}
 
 function makeJar(params) {
 
     const thickness = 10;
-
     const properties = {
         isStatic: true,
         render: {
@@ -155,13 +154,8 @@ function makeJar(params) {
         chamfer: { radius: [5, 5, 5, 5]}
     };
 
-    // left wall
     const leftWall = Bodies.rectangle(width * (1 - params.jarWidth) / 2, (height) - (height * params.jarHeight/2), thickness, height * params.jarHeight, properties);
-
-    // right wall
     const rightWall = Bodies.rectangle(width * (1 - (1 - params.jarWidth) / 2), (height) - (height * params.jarHeight/2), thickness, height * params.jarHeight, properties);
-
-    // bottom
     const bottom = Bodies.rectangle(width * 0.5, height - 5, width * params.jarWidth, thickness, properties);
 
     return [leftWall, rightWall, bottom];
@@ -193,7 +187,7 @@ function reset() {
 
 function handleReset() {
     resetRevealButton(btn);
-    Composite.clear(engine.world);
+    // Composite.clear(engine.world);
     
     if (intervalId) {
         clearInterval(intervalId);
@@ -205,5 +199,5 @@ function handleReset() {
     engine = newEngine;
     Composite.add(engine.world, newJar)
     generateBean = newBeans;
-    addBeansToWorld(engine.world, generateBean, params);
+    addBeansToWorld(engine.world, generateBean, generationSpeed);
 }
